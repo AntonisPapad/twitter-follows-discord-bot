@@ -1,19 +1,17 @@
 import asyncio
 import discord
 from discord.ext import commands
-from datetime import datetime
+# from datetime import datetime
 from twitter_functions import get_user, get_new_friends
 from db_functions import add_user, remove_user, check_for_user, read_channel_id, write_channel_id, get_tracked_users, update_friends_number, delete_channel_id
 from config import read_config
 
 
 bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
-# tracked_channel_id = None  # Global variable to store the channel ID
 
 
 @bot.event
 async def on_ready():
-    global tracked_channel_id
     print("Bot is online")
     try:
         synced = await bot.tree.sync()
@@ -22,14 +20,13 @@ async def on_ready():
         print(e)
 
     # Read the stored channel_id when the bot comes online
-    tracked_channel_id = read_channel_id()
-    if tracked_channel_id is not None:
+    bot.tracked_channel_id = read_channel_id()
+    if bot.tracked_channel_id is not None:
         bot.loop.create_task(track_users())
 
 
 async def track_users():
-    global tracked_channel_id
-    while tracked_channel_id is not None:
+    while bot.tracked_channel_id is not None:
         tracked_users = get_tracked_users()
         if tracked_users:   # check if the database is not empty
             for user in tracked_users:
@@ -70,7 +67,7 @@ async def track_users():
 
                         embed.set_thumbnail(url=pfp_url)
 
-                        channel = bot.get_channel(tracked_channel_id)
+                        channel = bot.get_channel(bot.tracked_channel_id)
                         await channel.send(embed=embed)
 
         await asyncio.sleep(10)
@@ -78,19 +75,17 @@ async def track_users():
 
 @bot.tree.command(name="start", description="Initialize the bot")
 async def start(interaction: discord.Interaction):
-    global tracked_channel_id
-    tracked_channel_id = interaction.channel_id
+    bot.tracked_channel_id = interaction.channel_id
     user = str(interaction.user)
     # Store the channel_id and the discord user when the /start command is called
-    write_channel_id(tracked_channel_id, user)
+    write_channel_id(bot.tracked_channel_id, user)
     await interaction.response.send_message("Bot initiated", ephemeral=True)
     bot.loop.create_task(track_users())  # Start the track_users task here
 
 
 @bot.tree.command(name="stop", description="Stop the bot")
 async def stop(interaction: discord.Interaction):
-    global tracked_channel_id
-    tracked_channel_id = None
+    bot.tracked_channel_id = None
     # Deletethe channel_id from the database
     delete_channel_id(interaction.channel_id)
     await interaction.response.send_message("Bot stopped", ephemeral=True)
