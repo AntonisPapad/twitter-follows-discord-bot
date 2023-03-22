@@ -29,5 +29,5 @@ def get_new_friends(username, friends_num):
     if (diff := user.friends_count - friends_num) > 0:
         new_friends = tweepy.Cursor(
             api.get_friends, screen_name=username).items(diff)
-        return [friend for friend in new_friends]
-    return None
+        return list(new_friends), diff
+    return None, diff

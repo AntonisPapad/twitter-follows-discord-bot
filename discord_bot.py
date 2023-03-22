@@ -31,9 +31,9 @@ async def track_users():
         if tracked_users:   # check if the database is not empty
             for user in tracked_users:
                 (username, friends_num) = user
-                new_friends = get_new_friends(username, friends_num)
+                (new_friends, diff) = get_new_friends(username, friends_num)
                 if new_friends is not None:
-                    update_friends_number(username, len(new_friends))
+                    update_friends_number(username, diff)
 
                     for friend in new_friends:
                         profile = friend.screen_name
@@ -69,6 +69,8 @@ async def track_users():
 
                         channel = bot.get_channel(bot.tracked_channel_id)
                         await channel.send(embed=embed)
+                elif diff < 0:
+                    update_friends_number(username, diff)
 
         await asyncio.sleep(10)
 
