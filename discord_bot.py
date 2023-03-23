@@ -10,7 +10,6 @@ class TwitterTrackerBot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tracked_channel_id = None
-        self.stop_event = asyncio.Event()
 
     async def on_ready(self):
         print("Bot is online")
@@ -25,7 +24,7 @@ class TwitterTrackerBot(commands.Bot):
             self.loop.create_task(self.track_users())
 
     async def track_users(self):
-        while bot.tracked_channel_id is not None:
+        while self.tracked_channel_id is not None:
             tracked_users = get_tracked_users()
             if tracked_users:   # check if the database is not empty
                 for user in tracked_users:
@@ -66,16 +65,12 @@ class TwitterTrackerBot(commands.Bot):
 
                             embed.set_thumbnail(url=pfp_url)
 
-                            channel = bot.get_channel(bot.tracked_channel_id)
+                            channel = bot.get_channel(self.tracked_channel_id)
                             await channel.send(embed=embed)
                     elif diff < 0:
                         update_friends_number(username, diff)
 
             await asyncio.sleep(10)
-
-            if self.stop_event.is_set():
-                self.stop_event.clear()  # Reset the stop_event for future use
-                break
 
 
 bot = TwitterTrackerBot(command_prefix='!', intents=discord.Intents.all())
@@ -93,7 +88,6 @@ async def start(interaction: discord.Interaction):
 @bot.tree.command(name="stop", description="Stop the bot")
 async def stop(interaction: discord.Interaction):
     bot.tracked_channel_id = None
-    bot.stop_event.set()  # Signal the track_users loop to stop
     delete_channel_id(interaction.channel_id)
     await interaction.response.send_message("Bot stopped", ephemeral=True)
 
