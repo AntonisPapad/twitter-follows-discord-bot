@@ -1,17 +1,29 @@
 import asyncio
 import discord
 from discord.ext import commands
-from twitter_functions import get_user, get_new_friends
-from db_functions import add_user, remove_user, check_for_user, read_channel_id, write_channel_id, get_tracked_users, update_friends_number, delete_channel_id
 from config import read_config
+from twitter_functions import get_user, get_new_friends
+from db_functions import (
+    add_user, remove_user, check_for_user, read_channel_id,
+    write_channel_id, get_tracked_users, update_friends_number,
+    delete_channel_id
+)
 
 
 class TwitterTrackerBot(commands.Bot):
+    """
+    A custom Discord bot class for tracking Twitter users and reporting their new friends
+    in a designated Discord channel. Inherits from the commands.Bot class.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tracked_channel_id = None
 
     async def on_ready(self):
+        """
+        Called when the bot is ready and connected to Discord.
+        """
         print("Bot is online")
         try:
             synced = await self.tree.sync()
@@ -24,6 +36,9 @@ class TwitterTrackerBot(commands.Bot):
             self.loop.create_task(self.track_users())
 
     async def track_users(self):
+        """
+        Tracks Twitter users and sends updates to the Discord channel.
+        """
         while self.tracked_channel_id is not None:
             tracked_users = get_tracked_users()
             if tracked_users:   # check if the database is not empty
@@ -33,6 +48,7 @@ class TwitterTrackerBot(commands.Bot):
                     if new_friends is not None:
                         update_friends_number(username, diff)
 
+                        # Prepare and send embed for each new friend
                         for friend in new_friends:
                             profile = friend.screen_name
                             url = f"https://www.twitter.com/{profile}"
@@ -73,9 +89,11 @@ class TwitterTrackerBot(commands.Bot):
             await asyncio.sleep(10)
 
 
+# Instantiate the bot
 bot = TwitterTrackerBot(command_prefix='!', intents=discord.Intents.all())
 
 
+# '/start' command to initialize the bot
 @bot.tree.command(name="start", description="Initialize the bot")
 async def start(interaction: discord.Interaction):
     bot.tracked_channel_id = interaction.channel_id
@@ -85,6 +103,7 @@ async def start(interaction: discord.Interaction):
     bot.loop.create_task(bot.track_users())
 
 
+# '/stop' command to stop the bot
 @bot.tree.command(name="stop", description="Stop the bot")
 async def stop(interaction: discord.Interaction):
     bot.tracked_channel_id = None
@@ -92,6 +111,7 @@ async def stop(interaction: discord.Interaction):
     await interaction.response.send_message("Bot stopped", ephemeral=True)
 
 
+# '/add' command to add a Twitter user to the tracker
 @bot.tree.command(name="add", description="Add Twitter user to tracker")
 async def add(interaction: discord.Interaction, username: str):
     user = get_user(username)
@@ -102,6 +122,7 @@ async def add(interaction: discord.Interaction, username: str):
         add_user(username)
 
 
+# '/remove' command to remove a Twitter user from the tracker
 @bot.tree.command(name="remove", description="Remove Twitter user from tracker")
 async def remove(interaction: discord.Interaction, username: str):
     if check_for_user(username) is None:
