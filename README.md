@@ -1,4 +1,4 @@
-# Twitter Tracker Discord Bot
+# Twitter Follows Discord Bot
 
 This project consists of a Discord bot that tracks specified Twitter users and reports their new friends (users they follow) in a designated Discord channel. It includes three main files:
 
